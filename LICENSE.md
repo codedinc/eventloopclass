@@ -1,0 +1,1 @@
+Only attendees of http://truthabouteventloops.com/ are allowed to modify, share and reuse this code.
