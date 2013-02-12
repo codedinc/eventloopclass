@@ -13,8 +13,9 @@ function connect(address) {
   var fd = syscalls.socket(syscalls.AF_INET, syscalls.SOCK_STREAM, 0);
 
   syscalls.connect(fd, port, address);
-  
+
   syscalls.fcntl(fd, syscalls.F_SETFL, syscalls.O_NONBLOCK);
+  
 
   // stdin: 0
   // socket: fd
@@ -26,6 +27,7 @@ function connect(address) {
     // stdin readable
     if (readableFds.indexOf(0) != -1) {
       var data = syscalls.read(0, 1024);
+      syscalls.select([], [fd], []);
       syscalls.write(fd, data);
     };
 
