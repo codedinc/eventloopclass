@@ -33,6 +33,12 @@ HttpServer.Connection = function(fd, callback) {
 
   loop.on(fd, 'read', function() {
     var data = syscalls.read(fd, 1024);
+    if (data.length == 0) {
+      // Connection was closed by browser
+      loop.remove(fd, 'read');
+      syscalls.close(fd);
+      return;
+    }
     parser.parse(data);
   })
 
@@ -46,8 +52,19 @@ HttpServer.Connection = function(fd, callback) {
 }
 
 HttpServer.Connection.prototype = {
-  send: function() {
+  send: function(body) {
+    var data = "HTTP/1.1 200 OK\r\n" + 
+               "Content-Type: text/plain\r\n" +
+               "Content-Length: " + body.length + "\r\n" +
+               "\r\n" +
+               body;
 
+    var self = this;
+
+    loop.once(this.fd, 'write', function() {
+      syscalls.write(self.fd, data);
+      syscalls.close(self.fd);
+    });
   }
 }
 
