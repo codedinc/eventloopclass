@@ -21,9 +21,23 @@ exports.once = function(fd, event, callback) {
   });
 };
 
+var timers = [];
+exports.setTimeout = function(callback, msec) {
+  timers.push({
+    timeout: new Date().getTime() + msec,
+    callback: callback
+  });
+};
+
 exports.run = function() {
-  while (true) {
-    var fds = syscalls.select(Object.keys(callbacks.read), Object.keys(callbacks.write), []);
+  while (Object.keys(callbacks.read).length > 0 ||
+         Object.keys(callbacks.write).length > 0 ||
+         timers.length > 0) {
+
+    var timeout = 60;
+    if (timers.length > 0) timeout = 1;
+
+    var fds = syscalls.select(Object.keys(callbacks.read), Object.keys(callbacks.write), [], timeout);
 
     var readableFds = fds[0];
     var writableFds = fds[1];
@@ -35,6 +49,14 @@ exports.run = function() {
     writableFds.forEach(function(fd) {
       var callback = callbacks.write[fd];
       callback();
+    });
+
+    var time = new Date().getTime();
+    timers.slice(0).forEach(function(timer) {
+      if (time >= timer.timeout) {
+        timer.callback();
+        timers.splice(timers.indexOf(timer), 1);
+      }
     });
   }
 };
