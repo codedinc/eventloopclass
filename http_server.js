@@ -18,9 +18,31 @@ HttpServer.prototype = {
     var self = this;
 
     loop.on(this.fd, 'read', function() {
-      var connFd = syscalls.accept(self.fd);
-      new HttpServer.Connection(connFd, self.callback);
+      try {
+        var connFd = syscalls.accept(self.fd);
+      } catch (e) {
+        // Another worker already accepted the connection
+      }
+
+      if (connFd) {
+        new HttpServer.Connection(connFd, self.callback);
+      }
     })
+  },
+
+  fork: function(count) {
+    if (syscalls.fork() == 0) { // child process
+      console.log("In child process: " + syscalls.getpid());
+      this.start();
+    } else {
+      console.log("In master process: " + syscalls.getpid());
+      count--;
+      if (count > 0) {
+        this.fork(count);
+      } else {
+        syscalls.waitpid(-1);
+      }
+    }
   }
 }
 
@@ -70,33 +92,12 @@ HttpServer.Connection.prototype = {
 
 
 var server = new HttpServer(function(request, response) {
-  if (request.url == "/slow") {
-    var objects = [];
-        
-    var i = 0;
-    function compute() {
-      for (var j = 0; j < 10000; j++, i++) {
-        objects.push(new Object()); // pretend we're computing something here
-      };
-
-      // schedule another call to compute()
-      if (i < 10000000) {
-        i++;
-        loop.nextTick(compute);
-      } else {
-        response.send("slow request done\n");
-      }
-    }
-    compute();
-
-  } else {
-
-    response.send("fast request done\n");
-  }
+  response.send("from pid: " + syscalls.getpid() + "\n");
 });
 
 server.listen(3000);
-server.start();
+// server.start();
+server.fork(3);
 
 loop.run();
 
