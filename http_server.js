@@ -72,7 +72,16 @@ HttpServer.Connection.prototype = {
 
 
 var server = new HttpServer(function(request, response) {
-  response.send("You requested: " + request.url);
+  if (request.url == "/slow") {
+    var objects = [];
+        
+    for (var i=0; i < 10000000; i++) {
+      objects.push(new Object()); // pretend we're computing something here
+    };
+    response.send("slow request done\n");
+  } else {
+    response.send("fast request done\n");
+  }
 });
 
 server.listen(3000);
