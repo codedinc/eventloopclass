@@ -19,9 +19,30 @@ HttpServer.prototype = {
 
     loop.on(this.fd, 'read', function() {
       // New incoming connection
-      var connFd = syscalls.accept(self.fd);
-      new HttpServer.Connection(connFd, self.callback);
+      try {
+        var connFd = syscalls.accept(self.fd);
+      } catch(e) {
+        // Another worker process acepted the connection
+      }
+      if (connFd) {
+        new HttpServer.Connection(connFd, self.callback);
+      }
     });
+  },
+
+  fork: function(count) {
+    if (syscalls.fork() == 0) {
+      console.log("In child process: " + syscalls.getpid());
+      this.start();
+    } else {
+      console.log("In master process: " + syscalls.getpid());
+      count--;
+      if (count > 0) {
+        this.fork(count);
+      } else {
+        syscalls.waitpid(-1); // Wait for all children prorcess to stop
+      }
+    }
   }
 }
 
@@ -94,11 +115,12 @@ var server = new HttpServer(function(request, response) {
     }
 
   } else {
-    response.send("fast request done\n");
+    response.send("from pid: " + syscalls.getpid() + "\n");
   }
 });
 
 server.listen(3000);
-server.start();
+// server.start();
+server.fork(3);
 
 loop.run();
