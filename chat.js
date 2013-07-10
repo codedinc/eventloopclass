@@ -1,4 +1,5 @@
 var syscalls = require('syscalls');
+var loop = require('./loop');
 
 var acceptFd = syscalls.socket(syscalls.AF_INET, syscalls.SOCK_STREAM, 0);
 syscalls.fcntl(acceptFd, syscalls.F_SETFL, syscalls.O_NONBLOCK);
@@ -32,26 +33,15 @@ function disconnect(fd) {
   console.log("User disconnected on FD: " + fd);
   syscalls.close(fd);
   users.splice(users.indexOf(fd), 1);
-  delete callbacks[fd];
+  loop.remove(fd, 'read');
 }
 
-var callbacks = {}; // fd: function
-
-callbacks[acceptFd] = function() {
+loop.on(acceptFd, 'read', function() {
   var userFd = accept();
 
-  callbacks[userFd] = function() {
+  loop.on(userFd, 'read', function() {
     readAndBroadcastMessage(userFd);
-  };
-}
-
-while (true) {
-  var fds = syscalls.select(Object.keys(callbacks), [], []);
-
-  var readableFds = fds[0];
-
-  readableFds.forEach(function(fd) {
-    var callback = callbacks[fd];
-    callback();
   });
-}
+});
+
+loop.run();
