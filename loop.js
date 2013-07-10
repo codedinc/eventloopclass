@@ -29,13 +29,20 @@ exports.setTimeout = function(callback, msec) {
   });
 };
 
+var nextTicks = [];
+exports.nextTick = function(callback) {
+  nextTicks.push(callback);
+};
+
 exports.run = function() {
   while (timers.length > 0 ||
          Object.keys(callbacks.read).length > 0 ||
-         Object.keys(callbacks.write).length > 0) {
+         Object.keys(callbacks.write).length > 0 || 
+         nextTicks.length > 0) {
 
     var timeout = 60;
     if (timers.length > 0) timeout = 1; // Over splification
+    if (nextTicks.length > 0) timeout = 0;
 
     var fds = syscalls.select(Object.keys(callbacks.read), Object.keys(callbacks.write), [], timeout);
 
@@ -57,6 +64,12 @@ exports.run = function() {
         timer.callback();
         timers.splice(timers.indexOf(timer), 1);
       }
+    });
+
+    var currentNextTicks = nextTicks;
+    nextTicks = [];
+    currentNextTicks.forEach(function(callback) {
+      callback();
     });
   }
 };
