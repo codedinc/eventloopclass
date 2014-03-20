@@ -1,6 +1,6 @@
 var syscalls = require('syscalls');
 var loop = require('./loop');
-var HTTPParser = require('./http_parser').HTTPParser;
+var httpParser = require('./http_parser');
 
 function HttpServer(callback) {
   this.callback = callback;
@@ -51,7 +51,7 @@ HttpServer.Connection = function(fd, callback) {
   this.callback = callback;
   var self = this;
 
-  var parser = new HTTPParser(HTTPParser.REQUEST);
+  var parser = httpParser.createParser();
 
   loop.on(fd, 'read', function() {
     var data = syscalls.read(fd, 1024);
@@ -66,13 +66,13 @@ HttpServer.Connection = function(fd, callback) {
     parser.parse(data);
   });
 
-  parser.onMessageComplete = function() {
+  parser.onComplete(function() {
     loop.remove(fd, 'read');
 
     var request = parser.info;
     console.log(request.method + " " + request.url);
     self.callback(request, self);
-  }
+  })
 }
 
 HttpServer.Connection.prototype = {
