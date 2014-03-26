@@ -26,13 +26,20 @@ exports.setTimeout = function(callback, msec) {
   })
 }
 
+var nextTicks = []
+exports.nextTick = function(callback) {
+  nextTicks.push(callback)
+}
+
 exports.run = function() {
   while (Object.keys(callbacks.read).length > 0 ||
          Object.keys(callbacks.write).length > 0 ||
-         timers.length > 0) {
+         timers.length > 0 ||
+         nextTicks.length > 0) {
 
     var timeout = 60
     if (timers.length > 0) timeout = 1
+    if (nextTicks.length > 0) timeout = 0
 
     var fds = syscalls.select(Object.keys(callbacks.read),
                               Object.keys(callbacks.write),
@@ -55,6 +62,12 @@ exports.run = function() {
         timer.callback()
         timers.splice(timers.indexOf(timer), 1)
       }
+    })
+
+    var currentNextTicks = nextTicks
+    nextTicks = []
+    currentNextTicks.forEach(function(nextTick) {
+      nextTick()
     })
   }
 }
