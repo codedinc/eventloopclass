@@ -47,6 +47,9 @@ exports.run = function() {
     var readableFds = fds[0]
     var writableFds = fds[1]
 
+    var currentNextTicks = nextTicks
+    nextTicks = []
+    
     readableFds.forEach(function(fd) {
       var callback = callbacks.read[fd]
       callback()
@@ -64,8 +67,6 @@ exports.run = function() {
       }
     })
 
-    var currentNextTicks = nextTicks
-    nextTicks = []
     currentNextTicks.forEach(function(nextTick) {
       nextTick()
     })
