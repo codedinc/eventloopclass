@@ -4,7 +4,7 @@ var httpParser = require('./http_parser')
 var parser = httpParser.createParser()
 
 // Set the callback
-parser.on('request', function(request) {
+parser.onComplete(function(request) {
   console.log(request)
 })
 
