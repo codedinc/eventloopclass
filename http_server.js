@@ -28,13 +28,19 @@ function Connection(fd, callback) {
   this.callback = callback
 
   var parser = httpParser.createParser()
+  var self = this
 
   loop.on(this.fd, 'read', function() {
     var data = syscalls.read(fd, 1024)
+    if (data.length == 0) {
+      // Connection was closed by the client
+      loop.remove(self.fd, 'read')
+      syscalls.close(self.fd)
+      return
+    }
     parser.parse(data)
   })
 
-  var self = this
   parser.on('request', function(request) {
     loop.remove(fd, 'read')
     console.log(request.method + ' ' + request.url)
@@ -43,13 +49,24 @@ function Connection(fd, callback) {
 }
 
 Connection.prototype.send = function(body) {
-  
+  var data = "HTTP/1.1 200 OK\r\n" +
+             "Content-Type: text/plain\r\n" +
+             "Content-Length: " + body.length + "\r\n" +
+             "\r\n" +
+             body
+
+  var self = this
+  loop.on(this.fd, 'write', function() {
+    syscalls.write(self.fd, data)
+    syscalls.close(self.fd)
+    loop.remove(self.fd, 'write')
+  })
 }
 
 
 
 var server = new HttpServer(function(req, res) {
-  res.send("WOW MUCH WEB SERVER!")
+  res.send("WOW MUCH WEB SERVER!\n")
 })
 
 server.listen(3000)
