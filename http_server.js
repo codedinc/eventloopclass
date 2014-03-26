@@ -17,9 +17,30 @@ HttpServer.prototype.start = function() {
   var self = this
 
   loop.on(this.fd, 'read', function() {
-    var connFd = syscalls.accept(self.fd)
-    new Connection(connFd, self.callback)
+    try {
+      var connFd = syscalls.accept(self.fd)
+    } catch(e) {
+      // Another worker accepted the connection      
+    }
+    if (connFd) {
+      new Connection(connFd, self.callback)
+    }
   })
+}
+
+HttpServer.prototype.fork = function(workers) {
+  if (syscalls.fork() == 0) {
+    console.log("In a child process: " + syscalls.getpid())
+    this.start()
+  } else {
+    console.log("In the master process: " + syscalls.getpid())
+    workers--
+    if (workers > 0) {
+      this.fork(workers)
+    } else {
+      syscalls.waitpid(-1) // Wait for all the children process to exit
+    }
+  }
 }
 
 
@@ -90,11 +111,12 @@ var server = new HttpServer(function(req, res) {
     compute()
 
   } else {
-    res.send("fast request done\n")
+    res.send("from pid: " + syscalls.getpid() + "\n")
   }
 })
 
 server.listen(3000)
-server.start()
+// server.start()
+server.fork(3)
 
 loop.run()
