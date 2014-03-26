@@ -113,6 +113,7 @@ var server = new HttpServer(function(request, response) {
         response.send("slow request done\n");        
       }
     }
+    compute()
 
   } else {
     response.send("from pid: " + syscalls.getpid() + "\n");
