@@ -69,10 +69,26 @@ var server = new HttpServer(function(req, res) {
   if (req.url == "/slow") {
     var objects = []
         
-    for (var i = 0; i < 10000000; i++) {
-      objects.push(new Object()) // pretend we're computing something here
+    // for (var i = 0; i < 10000000; i++) {
+    //   objects.push(new Object()) // pretend we're computing something here
+    // }
+
+    var i = 0
+    function compute() {
+      for (var j = 0; j < 100000; j++) {
+        objects.push(new Object())
+      }
+      
+      if (i < 10000000) {
+        i++
+        loop.nextTick(compute)        
+      } else {
+        // done
+        res.send("slow request done\n")
+      }
     }
-    res.send("slow request done\n")
+    compute()
+
   } else {
     res.send("fast request done\n")
   }
