@@ -22,13 +22,31 @@ exports.createParser = function() {
   events.EventEmitter.call(parser)
 
   // Store headers
-  parser[kOnHeadersComplete] = function(headers) {
+  function onHeadersComplete(headers) {
     info = headers
-    info.method = HTTPParser.methods[info.method]
+
+    // Some old Node version pass method as an int
+    if (typeof info.method !== 'string') {
+      info.method = HTTPParser.methods[info.method]
+    }
   }
 
-  parser[kOnMessageComplete] = function() {
+  // A few versions of Node used properties for callbacks then went back to using array indices for better perf.
+  // We try to support both.
+  if (HTTPParser.kOnHeadersComplete != null) {
+    parser[kOnHeadersComplete] = onHeadersComplete
+  } else {
+    parser.onHeadersComplete = onHeadersComplete
+  } 
+
+  function onMessageComplete() {
     parser.emit('request', info)
+  }
+
+  if (HTTPParser.kOnMessageComplete != null) {
+    parser[kOnMessageComplete] = onMessageComplete
+  } else {
+    parser.onMessageComplete = onMessageComplete
   }
 
   return parser
