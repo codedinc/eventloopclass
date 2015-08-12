@@ -1,5 +1,5 @@
 {
   "name" : "eventloopclass",
   "version" : "0.0.0",
-  "dependencies" : ["syscalls"]
+  "dependencies" : {"syscalls": "*"}
 }
