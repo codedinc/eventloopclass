@@ -22,8 +22,19 @@ exports.createParser = function() {
   events.EventEmitter.call(parser)
 
   // Store headers
-  function onHeadersComplete(headers) {
-    info = headers
+  function onHeadersComplete(versionMajor, versionMinor, headers, method, url) {
+    if (typeof versionMajor === 'object') {
+      // Older node version passed info as one hash argument
+      info = versionMajor
+    } else {
+      info = {
+        versionMajor: versionMajor,
+        versionMinor: versionMinor,
+        headers: headers,
+        method: method,
+        url: url
+      }
+    }
 
     // Some old Node version pass method as an int
     if (typeof info.method !== 'string') {
